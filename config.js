@@ -4,8 +4,11 @@
   sau đó nhập Project URL và Publishable/anon key ở bên dưới.
   KHÔNG bao giờ nhập service_role hoặc secret key vào file này.
 */
+
 window.DASHBOARD_CONFIG = {
-  SUPABASE_URL: '',
-  SUPABASE_ANON_KEY: '',
-  ORGANIZATION_NAME: 'Đơn vị của tôi'
+  SUPABASE_URL: 'https://ywldzxrqeiormlolrowb.supabase.co',
+  SUPABASE_ANON_KEY: 'sb_publishable_gbI5KCtM6hlGLPbApcXxPw_uKqJCxlS',
+  ORGANIZATION_NAME: 'BIDVTV'
+};
+
 };
