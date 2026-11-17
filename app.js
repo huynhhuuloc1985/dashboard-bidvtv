@@ -90,7 +90,7 @@ function render(){
     <div class="nav-caption">QUẢN LÝ</div>
     ${Object.entries(VIEW_NAMES).filter(([key])=>key!=='accounts'||admin()).map(([key,label])=>`<button class="nav-item ${key===page?'active':''}" data-action="navigate" data-view="${key}"><span class="ico">${icons[key]}</span>${label}</button>`).join('')}
     <div class="side-bottom"><div class="side-info"><div class="tiny">ĐƠN VỊ</div><b>${e(CFG.ORGANIZATION_NAME||'Đơn vị của tôi')}</b><div class="tiny">${CLOUD?'☁ Dữ liệu đồng bộ trực tuyến':'◉ Phiên bản dùng thử (lưu tại máy)'}</div>
-    ${CLOUD?`<button data-action="logout">Đăng xuất ↗</button>`:`<button data-action="reset-demo">Khôi phục dữ liệu mẫu ↺</button>`}</div></div>
+    ${CLOUD?`<button data-action="change-password">Đặt / Đổi mật khẩu</button><button data-action="logout">Đăng xuất ↗</button>`:`<button data-action="reset-demo">Khôi phục dữ liệu mẫu ↺</button>`}</div></div>
   </aside><div class="main"><header class="topbar"><div style="display:flex;align-items:center;gap:12px"><button class="mobile-menu" data-action="menu">☰</button><div><div class="breadcrumb">Không gian làm việc / ${e(VIEW_NAMES[page])}</div><h1 class="page-title">${e(VIEW_NAMES[page])}</h1></div></div>
     <div class="top-right">${CLOUD?'':`<select class="demo-switch" id="demo-switch" aria-label="Chuyển vai trò dùng thử"><option value="admin" ${admin()?'selected':''}>👤 Quản trị viên</option>${state.db.departments.map(d=>`<option value="${e(d.id)}" ${!admin()&&currentDep()===d.id?'selected':''}>🏢 ${e(d.name)}</option>`).join('')}</select>`}<div class="mode-label">${CLOUD?'TRỰC TUYẾN':'DÙNG THỬ'}</div><div class="avatar">${admin()?'QT':'CB'}</div><div class="user-meta"><b>${e(CLOUD?state.profile.full_name:(admin()?'Quản trị viên':'Cán bộ phòng'))}</b>${e(admin()?'Người quản lý':deptName(currentDep()))}</div></div>
   </header><main class="content"><div class="view">${pageHTML}</div></main></div></div>${state.modal?renderModal():''}`;
@@ -176,6 +176,7 @@ function renderSurveySummary(c,ass){
 function modalShell(title,body,footer='',wide=false){return `<div class="modal-backdrop" data-action="backdrop"><div class="modal ${wide?'wide':''}" role="dialog" aria-modal="true" aria-label="${e(title)}"><div class="modal-header"><h2>${e(title)}</h2><button class="close" data-action="close-modal" aria-label="Đóng">×</button></div>${body}${footer}</div></div>`}
 function renderModal(){
  const m=state.modal;
+ if(m.type==='password')return modalShell('Đặt / Đổi mật khẩu',`<form id="form-password"><div class="modal-body"><div class="notice">Cán bộ được mời qua email hãy đặt mật khẩu riêng trước khi đăng xuất. Không chia sẻ mật khẩu với người khác.</div><div class="form-group"><label>Mật khẩu mới *</label><input class="field" name="new_password" type="password" autocomplete="new-password" minlength="8" required placeholder="Ít nhất 8 ký tự"></div><div class="form-group"><label>Nhập lại mật khẩu mới *</label><input class="field" name="confirm_password" type="password" autocomplete="new-password" minlength="8" required></div></div><div class="modal-footer"><button type="button" class="btn" data-action="close-modal">Hủy</button><button class="btn btn-primary" type="submit">Lưu mật khẩu</button></div></form>`);
  if(m.type==='new-department')return modalShell('Thêm phòng ban',`<form id="form-department"><div class="modal-body"><div class="form-group"><label for="dept-name">Tên phòng ban *</label><input class="field" id="dept-name" name="name" required maxlength="120" autofocus placeholder="Ví dụ: Phòng Hành chính – Tổng hợp" /></div></div><div class="modal-footer"><button type="button" class="btn" data-action="close-modal">Hủy</button><button type="submit" class="btn btn-primary">Lưu phòng ban</button></div></form>`);
  if(m.type==='new-campaign')return modalShell('Tạo yêu cầu / đợt khảo sát',`<form id="form-campaign"><div class="modal-body">
  <div class="form-grid"><div class="form-group"><label for="campaign-type">Loại yêu cầu *</label><select id="campaign-type" name="type" class="field"><option value="task">Công việc / Báo cáo</option><option value="survey">Khảo sát số liệu</option></select></div><div class="form-group"><label for="campaign-due">Hạn chót *</label><input id="campaign-due" class="field" name="due" type="date" required value="${localDay(7)}" /></div></div>
@@ -319,6 +320,7 @@ function busy(target,b){if(target){target.disabled=b;if(b)target.dataset.origina
  if(action==='export-campaign'){exportCSV(target.dataset.id);return}
  if(action==='refresh'&&CLOUD){busy(target,true);try{await refreshCloud();render();toast('Đã đồng bộ dữ liệu mới nhất.')}catch(err){busy(target,false);toast(err.message,true)}return}
  if(action==='reset-demo'&&!CLOUD){if(confirm('Khôi phục dữ liệu dùng thử? Các nội dung nhập trên thiết bị này sẽ bị xóa.')){state.db=demoSeed();saveDemo();state.view='dashboard';state.modal=null;render();toast('Đã khôi phục dữ liệu mẫu.')}return}
+ if(action==='change-password'&&CLOUD){state.modal={type:'password'};render();return}
  if(action==='logout'){const {error}=await supa.auth.signOut();if(error){toast(error.message,true);return}state.user=null;state.profile=null;state.db=null;render();return}
  if(action==='toggle-campaign'&&admin()){
   if(!confirm('Xác nhận thay đổi trạng thái yêu cầu này?'))return;
@@ -345,7 +347,7 @@ function busy(target,b){if(target){target.disabled=b;if(b)target.dataset.origina
   },220)}
  });
  document.addEventListener('submit',async ev=>{
-  const form=ev.target;if(!['form-auth','form-department','form-campaign','form-response'].includes(form.id))return;
+  const form=ev.target;if(!['form-auth','form-department','form-campaign','form-response','form-password'].includes(form.id))return;
   ev.preventDefault();if(state.loading)return;
   state.loading=true;const submit=$('[type="submit"]',form);busy(submit,true);
   try{
@@ -360,6 +362,13 @@ function busy(target,b){if(target){target.disabled=b;if(b)target.dataset.origina
      const {data,error}=await supa.auth.signInWithPassword({email,password});if(error)throw error;
      state.user=data.user;await refreshCloud();state.view='dashboard';render();toast('Đăng nhập thành công.');
     }
+   }else if(form.id==='form-password'){
+    if(!CLOUD||!state.user)throw Error('Bạn cần đăng nhập trước khi đặt mật khẩu.');
+    const p=String(fd.get('new_password')||''),confirmPassword=String(fd.get('confirm_password')||'');
+    if(p.length<8)throw Error('Mật khẩu cần tối thiểu 8 ký tự.');
+    if(p!==confirmPassword)throw Error('Hai lần nhập mật khẩu không khớp.');
+    const {error}=await supa.auth.updateUser({password:p});if(error)throw error;
+    state.modal=null;render();toast('Đã lưu mật khẩu. Từ lần sau bạn có thể đăng nhập bằng email và mật khẩu này.');
    }else if(form.id==='form-department'){
     if(!admin())throw Error('Không đủ quyền tạo phòng ban.');const name=String(fd.get('name')||'').trim();if(!name)throw Error('Vui lòng nhập tên phòng ban.');
     await saveDepartment(name);state.modal=null;render();toast('Đã thêm phòng ban.');
