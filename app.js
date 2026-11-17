@@ -86,7 +86,7 @@ function render(){
  const page=state.view;
  const pageHTML={dashboard:renderDashboard,campaigns:renderCampaigns,reports:renderReports,departments:renderDepartments,accounts:renderAccounts}[page]();
  root.innerHTML=`<div class="layout"><aside class="sidebar ${state.menu?'open':''}" id="sidebar">
-    <div class="brand"><div class="brand-symbol">▥</div><div><b>ĐIỀU HÀNH 360</b><small>Báo cáo & khảo sát nội bộ</small></div></div>
+    <div class="brand"><div class="brand-symbol">▥</div><div><b>TỔNG HỢP</b><small>Báo cáo & khảo sát nội bộ</small></div></div>
     <div class="nav-caption">QUẢN LÝ</div>
     ${Object.entries(VIEW_NAMES).filter(([key])=>key!=='accounts'||admin()).map(([key,label])=>`<button class="nav-item ${key===page?'active':''}" data-action="navigate" data-view="${key}"><span class="ico">${icons[key]}</span>${label}</button>`).join('')}
     <div class="side-bottom"><div class="side-info"><div class="tiny">ĐƠN VỊ</div><b>${e(CFG.ORGANIZATION_NAME||'Đơn vị của tôi')}</b><div class="tiny">${CLOUD?'☁ Dữ liệu đồng bộ trực tuyến':'◉ Phiên bản dùng thử (lưu tại máy)'}</div>
@@ -226,7 +226,7 @@ function renderModal(){
  }
  return '';
 }
-function renderAuth(){const signup=state.authMode==='signup';return `<div class="auth-layout"><div class="auth-banner"><div class="eyebrow">▥ ĐIỀU HÀNH 360</div><h1>Quản lý công việc và khảo sát nội bộ trên một nền tảng.</h1><p>Giao việc cho từng phòng, thu thập báo cáo từ cán bộ, theo dõi tỷ lệ hoàn thành, thống kê trực quan và xuất dữ liệu.</p><div class="auth-illustration"><span></span><span></span><span></span><span></span></div></div>
+function renderAuth(){const signup=state.authMode==='signup';return `<div class="auth-layout"><div class="auth-banner"><div class="eyebrow">▥ TỔNG HỢP</div><h1>Quản lý công việc và khảo sát nội bộ trên một nền tảng.</h1><p>Giao việc cho từng phòng, thu thập báo cáo từ cán bộ, theo dõi tỷ lệ hoàn thành, thống kê trực quan và xuất dữ liệu.</p><div class="auth-illustration"><span></span><span></span><span></span><span></span></div></div>
  <div class="auth-form-area"><div class="auth-box"><span class="tag">KHÔNG GIAN LÀM VIỆC</span><h2>${signup?'Đăng ký tài khoản':'Đăng nhập hệ thống'}</h2><p>${signup?'Sau khi đăng ký, quản trị viên sẽ gán tài khoản vào phòng ban của bạn.':'Nhập tài khoản đã đăng ký để xem các yêu cầu được giao và cập nhật báo cáo.'}</p><form id="form-auth">
  ${signup?`<div class="form-group"><label>Họ và tên</label><input class="field" name="full_name" required maxlength="120" placeholder="Nguyễn Văn A" autocomplete="name"></div>`:''}
  <div class="form-group"><label>Địa chỉ email</label><input class="field" name="email" type="email" required autocomplete="email" placeholder="ten@donvi.gov.vn"></div>
