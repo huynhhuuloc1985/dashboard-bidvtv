@@ -3,6 +3,7 @@
 const CFG = window.DASHBOARD_CONFIG || {};
 const CLOUD = !!(CFG.SUPABASE_URL && CFG.SUPABASE_ANON_KEY);
 const STORE = 'donvi_dashboard_demo_v1';
+const INVITE_RETURN = /(?:[?#&])type=invite(?:[&#]|$)/.test(location.href);
 const VIEW_NAMES = {dashboard:'Tổng quan',campaigns:'Yêu cầu / Khảo sát',reports:'Nhập kết quả',departments:'Phòng ban',accounts:'Tài khoản'};
 const $ = (sel, root=document) => root.querySelector(sel);
 const $$ = (sel, root=document) => [...root.querySelectorAll(sel)];
@@ -152,8 +153,10 @@ function renderDepartments(){const deps=admin()?state.db.departments:state.db.de
 function renderAccounts(){if(!admin())return '<div class="notice warning">Bạn không có quyền quản lý tài khoản.</div>';
  if(!CLOUD)return `${hero('Tài khoản cán bộ','Phân quyền tài khoản được sử dụng khi kết nối dữ liệu trực tuyến.')}
  <div class="notice"><b>Chế độ dùng thử:</b> Bạn có thể chuyển giữa vai trò Quản trị viên và cán bộ của từng phòng ở góc phải. Khi kết nối Supabase, tài khoản đăng ký sẽ xuất hiện tại mục này để quản trị viên phân phòng.</div>`;
- return `${hero('Phân quyền cán bộ','Gán phòng ban và vai trò cho tài khoản đã đăng ký.')}<div class="notice warning">Chỉ gán vai trò <b>Quản trị viên</b> cho người được phép xem, chỉnh sửa toàn bộ dữ liệu của đơn vị.</div>
- <section class="panel" style="padding:0"><div class="table-wrap"><table class="data-table"><thead><tr><th>CÁN BỘ</th><th>TÊN ĐĂNG NHẬP</th><th>EMAIL (QUẢN TRỊ)</th><th>PHÒNG BAN</th><th>VAI TRÒ</th><th></th></tr></thead><tbody>${state.db.profiles.map(p=>`<tr><td class="primary-cell">${e(p.full_name||'Chưa đặt tên')}</td><td><input class="field" id="profile-username-${e(p.id)}" value="${e(p.username||'')}" placeholder="vd: nv001" maxlength="30" pattern="[a-zA-Z0-9]{3,30}" title="3–30 ký tự chữ hoặc số"></td><td>${e(p.email)}</td><td><select class="field" id="profile-dep-${e(p.id)}"><option value="">Chưa phân phòng</option>${state.db.departments.map(d=>`<option value="${e(d.id)}" ${p.department_id===d.id?'selected':''}>${e(d.name)}</option>`).join('')}</select></td><td><select class="field" id="profile-role-${e(p.id)}"><option value="staff" ${p.role==='staff'?'selected':''}>Cán bộ</option><option value="admin" ${p.role==='admin'?'selected':''}>Quản trị viên</option></select></td><td><button class="btn btn-sm btn-light" data-action="save-profile" data-id="${e(p.id)}">Lưu</button></td></tr>`).join('')}</tbody></table></div></section>`;
+ return `${hero('Quản lý tài khoản cán bộ','Tạo tài khoản mới, phân phòng, sửa tên và mã đăng nhập.',`<button class="btn btn-primary" data-action="new-staff">＋ Thêm cán bộ</button>`)}
+ <div class="notice">Tài khoản mới được gửi email mời thiết lập mật khẩu. Cán bộ chỉ dùng <b>tên đăng nhập</b> và mật khẩu để vào hệ thống. Gửi thư mời cần cấu hình SMTP.</div>
+ <div class="notice warning">Chỉ cấp quyền <b>Quản trị viên</b> cho người được phép xem, chỉnh sửa toàn bộ dữ liệu của đơn vị.</div>
+ <section class="panel" style="padding:0"><div class="table-wrap"><table class="data-table"><thead><tr><th>CÁN BỘ (CÓ THỂ SỬA)</th><th>TÊN ĐĂNG NHẬP</th><th>EMAIL (QUẢN TRỊ)</th><th>PHÒNG BAN</th><th>VAI TRÒ</th><th></th></tr></thead><tbody>${state.db.profiles.map(p=>`<tr><td><input class="field" id="profile-name-${e(p.id)}" value="${e(p.full_name||'')}" placeholder="Nhập họ tên" maxlength="120" aria-label="Họ tên cán bộ"></td><td><input class="field" id="profile-username-${e(p.id)}" value="${e(p.username||'')}" placeholder="vd: nv001" maxlength="30" pattern="[a-zA-Z0-9]{3,30}" title="3–30 ký tự chữ hoặc số"></td><td>${e(p.email)}</td><td><select class="field" id="profile-dep-${e(p.id)}"><option value="">Chưa phân phòng</option>${state.db.departments.map(d=>`<option value="${e(d.id)}" ${p.department_id===d.id?'selected':''}>${e(d.name)}</option>`).join('')}</select></td><td><select class="field" id="profile-role-${e(p.id)}"><option value="staff" ${p.role==='staff'?'selected':''}>Cán bộ</option><option value="admin" ${p.role==='admin'?'selected':''}>Quản trị viên</option></select></td><td><button class="btn btn-sm btn-light" data-action="save-profile" data-id="${e(p.id)}">Lưu</button></td></tr>`).join('')}</tbody></table></div></section>`;
 }
 function renderSurveySummary(c,ass){
  const subs=ass.map(a=>({sub:subOf(a.id),department:deptName(a.department_id)})).filter(x=>x.sub&&x.sub.progress===100);
@@ -177,6 +180,14 @@ function modalShell(title,body,footer='',wide=false){return `<div class="modal-b
 function renderModal(){
  const m=state.modal;
  if(m.type==='password')return modalShell('Đặt / Đổi mật khẩu',`<form id="form-password"><div class="modal-body"><div class="notice">Cán bộ được mời qua email hãy đặt mật khẩu riêng trước khi đăng xuất. Không chia sẻ mật khẩu với người khác.</div><div class="form-group"><label>Mật khẩu mới *</label><input class="field" name="new_password" type="password" autocomplete="new-password" minlength="8" required placeholder="Ít nhất 8 ký tự"></div><div class="form-group"><label>Nhập lại mật khẩu mới *</label><input class="field" name="confirm_password" type="password" autocomplete="new-password" minlength="8" required></div></div><div class="modal-footer"><button type="button" class="btn" data-action="close-modal">Hủy</button><button class="btn btn-primary" type="submit">Lưu mật khẩu</button></div></form>`);
+ if(m.type==='new-staff')return modalShell('Thêm cán bộ mới',`<form id="form-new-staff"><div class="modal-body">
+  <div class="notice">Admin tạo tài khoản và gửi thư mời. Cán bộ bấm liên kết trong email, tự đặt mật khẩu rồi đăng nhập bằng <b>mã cán bộ</b>.</div>
+  <div class="form-group"><label>Họ tên cán bộ *</label><input class="field" name="full_name" required maxlength="120" autocomplete="off" placeholder="Ví dụ: Nguyễn Văn A" /></div>
+  <div class="form-group"><label>Tên đăng nhập / Mã cán bộ *</label><input class="field" name="username" required minlength="3" maxlength="30" pattern="[A-Za-z0-9]{3,30}" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Ví dụ: nv001 hoặc 123456"/><span class="form-hint">Chỉ chữ không dấu a-z hoặc số 0-9; tối đa 30 ký tự.</span></div>
+  <div class="form-group"><label>Email nhận thư mời *</label><input class="field" name="email" type="email" required maxlength="254" autocomplete="off" placeholder="Email được cấp phép"/><span class="form-hint">Email chỉ dùng để kích hoạt và khôi phục; cán bộ không phải nhập email khi đăng nhập.</span></div>
+  <div class="form-group"><label>Phòng ban *</label><select class="field" name="department_id" required><option value="">Chọn phòng ban</option>${state.db.departments.map(d=>`<option value="${e(d.id)}">${e(d.name)}</option>`).join('')}</select></div>
+  <div class="form-group"><label>Vai trò</label><input class="field" readonly value="Cán bộ (staff)"/><span class="form-hint">Để an toàn, tài khoản mới mặc định là Cán bộ; chỉ nâng thành Admin sau khi được phê duyệt.</span></div>
+  </div><div class="modal-footer"><button class="btn" type="button" data-action="close-modal">Hủy</button><button class="btn btn-primary" type="submit">Gửi thư mời & tạo tài khoản</button></div></form>`);
  if(m.type==='new-department')return modalShell('Thêm phòng ban',`<form id="form-department"><div class="modal-body"><div class="form-group"><label for="dept-name">Tên phòng ban *</label><input class="field" id="dept-name" name="name" required maxlength="120" autofocus placeholder="Ví dụ: Phòng Hành chính – Tổng hợp" /></div></div><div class="modal-footer"><button type="button" class="btn" data-action="close-modal">Hủy</button><button type="submit" class="btn btn-primary">Lưu phòng ban</button></div></form>`);
  if(m.type==='new-campaign')return modalShell('Tạo yêu cầu / đợt khảo sát',`<form id="form-campaign"><div class="modal-body">
  <div class="form-grid"><div class="form-group"><label for="campaign-type">Loại yêu cầu *</label><select id="campaign-type" name="type" class="field"><option value="task">Công việc / Báo cáo</option><option value="survey">Khảo sát số liệu</option></select></div><div class="form-group"><label for="campaign-due">Hạn chót *</label><input id="campaign-due" class="field" name="due" type="date" required value="${localDay(7)}" /></div></div>
@@ -252,7 +263,7 @@ async function init(){
    supa=window.supabase.createClient(CFG.SUPABASE_URL,CFG.SUPABASE_ANON_KEY);
    const {data,error}=await supa.auth.getUser(); if(error && !/Auth session missing/i.test(error.message))throw error;
    state.user=data?.user||null;
-   if(state.user)await refreshCloud();
+   if(state.user){await refreshCloud();if(INVITE_RETURN)state.modal={type:'password'}}
    setInterval(async()=>{if(!state.user||state.modal||state.loading)return;try{await refreshCloud();render()}catch(err){console.warn('Auto refresh:',err)}},60000);
   }else state.db=loadDemo();
   render();
@@ -282,10 +293,23 @@ async function toggleCampaign(id){const c=getCampaign(id),newStatus=c.status==='
  if(CLOUD){const {error}=await supa.from('campaigns').update({status:newStatus}).eq('id',id);if(error)throw error;await refreshCloud()}
  else{c.status=newStatus;saveDemo()}
 }
-async function saveProfile(id,role,department_id,username){
+async function saveProfile(id,role,department_id,username,full_name){
  const normalized=String(username||'').trim().toLowerCase();
+ const name=String(full_name||'').trim();
  if(!/^[a-z0-9]{3,30}$/.test(normalized))throw Error('Tên đăng nhập phải có 3–30 ký tự chữ không dấu hoặc số.');
- const {error}=await supa.from('profiles').update({role,department_id:department_id||null,username:normalized}).eq('id',id);if(error)throw error;await refreshCloud();
+ if(!name || name.length>120)throw Error('Họ tên cán bộ phải có từ 1 đến 120 ký tự.');
+ const {error}=await supa.from('profiles').update({role,department_id:department_id||null,username:normalized,full_name:name}).eq('id',id);if(error)throw error;await refreshCloud();
+}
+async function inviteStaff(payload){
+ const {data,error}=await supa.functions.invoke('create-staff',{body:payload});
+ if(error){
+  let message='Không thể tạo tài khoản. Kiểm tra Edge Function create-staff và SMTP.';
+  try {const detail=await error.context?.json?.();if(detail?.error)message=detail.error}catch{}
+  throw new Error(message);
+ }
+ if(!data?.ok)throw new Error(data?.error||'Không nhận được xác nhận tạo tài khoản.');
+ await refreshCloud();
+ return data;
 }
 function parseQuestions(raw){return raw.split('\n').map(v=>v.trim()).filter(Boolean).map(v=>{
  let type='text',label=v;
@@ -315,6 +339,7 @@ function busy(target,b){if(target){target.disabled=b;if(b)target.dataset.origina
  
  if(action==='new-campaign'){state.modal={type:'new-campaign'};render();return}
  if(action==='new-department'){state.modal={type:'new-department'};render();return}
+ if(action==='new-staff'&&admin()&&CLOUD){state.modal={type:'new-staff'};render();return}
  if(action==='detail'){state.modal={type:'detail',id:target.dataset.id};render();return}
  if(action==='respond'){state.modal={type:'respond',assignmentId:target.dataset.assignment};render();return}
  if(action==='export'){exportCSV();return}
@@ -327,9 +352,9 @@ function busy(target,b){if(target){target.disabled=b;if(b)target.dataset.origina
   if(!confirm('Xác nhận thay đổi trạng thái yêu cầu này?'))return;
   busy(target,true);try{await toggleCampaign(target.dataset.id);state.modal={type:'detail',id:target.dataset.id};render();toast('Đã cập nhật trạng thái yêu cầu.')}catch(err){busy(target,false);toast(err.message,true)}return;
  }
- if(action==='save-profile'&&admin()&&CLOUD){const id=target.dataset.id,role=el('profile-role-'+id).value,department=el('profile-dep-'+id).value,username=el('profile-username-'+id).value;
+ if(action==='save-profile'&&admin()&&CLOUD){const id=target.dataset.id,role=el('profile-role-'+id).value,department=el('profile-dep-'+id).value,username=el('profile-username-'+id).value,fullName=el('profile-name-'+id).value;
   if(id===state.user.id&&role!=='admin'){toast('Không thể tự hạ vai trò quản trị của chính mình.',true);return}
-  busy(target,true);try{await saveProfile(id,role,department,username);render();toast('Đã lưu tên đăng nhập, phòng ban và vai trò.')}catch(err){busy(target,false);toast(err.message,true)}return;
+  busy(target,true);try{await saveProfile(id,role,department,username,fullName);render();toast('Đã lưu họ tên, tên đăng nhập, phòng ban và vai trò.');}catch(err){busy(target,false);toast(err.message,true)}return;
  }
  });
  document.addEventListener('change',ev=>{
@@ -348,7 +373,7 @@ function busy(target,b){if(target){target.disabled=b;if(b)target.dataset.origina
   },220)}
  });
  document.addEventListener('submit',async ev=>{
-  const form=ev.target;if(!['form-auth','form-department','form-campaign','form-response','form-password'].includes(form.id))return;
+  const form=ev.target;if(!['form-auth','form-department','form-campaign','form-response','form-password','form-new-staff'].includes(form.id))return;
   ev.preventDefault();if(state.loading)return;
   state.loading=true;const submit=$('[type="submit"]',form);busy(submit,true);
   try{
@@ -369,6 +394,19 @@ function busy(target,b){if(target){target.disabled=b;if(b)target.dataset.origina
     if(p!==confirmPassword)throw Error('Hai lần nhập mật khẩu không khớp.');
     const {error}=await supa.auth.updateUser({password:p});if(error)throw error;
     state.modal=null;render();toast('Đã lưu mật khẩu. Từ lần sau bạn có thể đăng nhập bằng tên tài khoản và mật khẩu này.');
+   }else if(form.id==='form-new-staff'){
+    if(!CLOUD||!admin())throw Error('Chỉ quản trị viên mới được tạo tài khoản.');
+    const username=String(fd.get('username')||'').trim().toLowerCase();
+    const full_name=String(fd.get('full_name')||'').trim();
+    const email=String(fd.get('email')||'').trim().toLowerCase();
+    const department_id=String(fd.get('department_id')||'');
+    if(!/^[a-z0-9]{3,30}$/.test(username))throw Error('Mã cán bộ phải có 3–30 ký tự chữ không dấu hoặc số.');
+    if(!full_name||full_name.length>120)throw Error('Họ tên cán bộ không hợp lệ.');
+    if(!email||email.length>254||!email.includes('@'))throw Error('Email không hợp lệ.');
+    if(!state.db.departments.some(d=>d.id===department_id))throw Error('Vui lòng chọn phòng ban có sẵn.');
+    const result=await inviteStaff({username,full_name,email,department_id});
+    state.modal=null;state.view='accounts';render();
+    toast(result.message||'Đã tạo tài khoản và gửi thư mời.');
    }else if(form.id==='form-department'){
     if(!admin())throw Error('Không đủ quyền tạo phòng ban.');const name=String(fd.get('name')||'').trim();if(!name)throw Error('Vui lòng nhập tên phòng ban.');
     await saveDepartment(name);state.modal=null;render();toast('Đã thêm phòng ban.');
